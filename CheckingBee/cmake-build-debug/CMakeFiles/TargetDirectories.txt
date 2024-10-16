@@ -1,0 +1,3 @@
+/Users/metzliceleste/CLionProjects/CheckingBee/cmake-build-debug/CMakeFiles/CheckingBee.dir
+/Users/metzliceleste/CLionProjects/CheckingBee/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/metzliceleste/CLionProjects/CheckingBee/cmake-build-debug/CMakeFiles/rebuild_cache.dir
