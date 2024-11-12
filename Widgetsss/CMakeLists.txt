@@ -12,7 +12,8 @@ include("${wxWidgets_USE_FILE}")
 set(SRCS main.cpp)
 
 if (WIN32)
-    set(SRCS ${SRCS} wxWidgetsTest.rc main.cpp)
+    set(SRCS ${SRCS} wxWidgetsTest.rc main.cpp
+            cmake-build-debug/spellCheck.h)
 endif (WIN32)
 
 add_executable(${PROJECT_NAME} WIN32 ${SRCS})
