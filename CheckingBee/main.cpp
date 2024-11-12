@@ -1,71 +1,80 @@
-//spell checking through TRIE, running succesfully
 #include<iostream>
 #include<fstream>
 #include<string>
-#include<cstdlib>
+#include<sstream>
+#include <algorithm>
+#include <vector>
+
 using namespace std;
 
 const int ALPHABET_SIZE = 26;
 const int MAX_EDIT_DISTANCE = 2;
+int misspellings = 0;
 
-// Nodo del Trie
-struct TrieNode {
+class Trie {
+    Trie *children[ALPHABET_SIZE]; //Cada nodo tendra un apuntador para cada letra del abecedario
+    bool isEndOfWord;
     string word;
-    TrieNode* children[ALPHABET_SIZE]; // Hijo para cada letra
-    bool isEndOfWord; // Marca si es el final de una palabra
+    int similarities;
 
-    TrieNode() {
+public:
+    Trie() {
+        similarities = 0;
+        word = "";
         isEndOfWord = false;
+        //inicializamos los apuntadores como null
         for (int i = 0; i < ALPHABET_SIZE; i++)
             children[i] = nullptr;
     }
-};
 
-// Clase Trie
-class Trie {
-private:
-    TrieNode* root;
-
-public:
-    int misspellings;
-    Trie() {
-        root = new TrieNode();
-    }
-
-    // Insertar palabra en el Trie
-    // En la clase Trie
-    void insert(const string& word) {  // No necesitas pasar root como argumento
-        TrieNode* current = root;
-        for (char c : word) {
+    void insert(string s) {
+        Trie* current = this;
+        //Iteramos cada letra de la palabra
+        for (char c : s) {
+            if (c < 'a' || c > 'z') continue;
             int index = c - 'a';
-            if (current->children[index] == nullptr) {
-                current->children[index] = new TrieNode();
-            }
+            //Si no esta en el nodo la agregamos
+            if(!(current->children[index]))
+                current->children[index] = new Trie;
+            //Avanzamos de nodo
             current = current->children[index];
         }
-        current->word = word;  // Marca el final de la palabra
+        //Marcamos el final de la palabra y la guardamos
+        current->word = s;
+        current->isEndOfWord = true;
     }
 
-
-    // Función para buscar una palabra exacta en el Trie
-    bool search(const string& word) {
-        TrieNode* node = root;
-        for (char c : word) {
+    bool search(string s) {
+        Trie* current = this;
+        //Buscamos letra por letra
+        for(char c : s) {
             int index = c - 'a';
-            if (!node->children[index])
+            current = current->children[index];
+            current->
+            if (!current)
                 return false;
-            node = node->children[index];
         }
-        if (!node && node->isEndOfWord)
-        {
-            countMisspellings();
-        }
-        return node && node->isEndOfWord;
+        //Si llegamos a la ultima letra entonces la palabra si existe dentro del arbol
+        if (current->isEndOfWord)
+            return true;
+        return false;
     }
 
-    void countMisspellings() {
-        misspellings++;
+    static void showMisspellings() {
+        cout << "Cantidad de palabras incorrectas: " << misspellings << endl;
     }
+
+//    bool startsWith(string word) {
+//        Trie* current = this;
+//        string prefix = word.substr(0,3);
+//        for (char c: prefix) {
+//            int index = c - 'a';
+//            current = current->children[index];
+//            if (!current)
+//                return false;
+//        }
+//        return true;
+//    }
 
     // Función principal para buscar palabras en el Trie que tengan una distancia de Levenshtein menor o igual a maxDistance
     vector<string> getLevenshteinSuggestions(const string& targetWord, int maxDistance = MAX_EDIT_DISTANCE) {
@@ -77,23 +86,19 @@ public:
             currentRow[i] = i;
         }
 
-        // Inicializar la primera fila de la tabla de Levenshtein (comparando con la cadena vacía)
-        for (int i = 0; i <= targetWord.size(); i++) {
-            currentRow[i] = i;
-        }
-
         // Recorrer los hijos del nodo raíz
-        for (int i = 0; i < 26; i++) {
-            if (root->children[i] != nullptr) {
-                searchLevenshtein(root->children[i], 'a' + i, targetWord, currentRow, suggestions, maxDistance);
+        Trie* current = this;
+        for (int i = 0; i < ALPHABET_SIZE; i++) {
+            if (current->children[i] != nullptr) {
+                searchLevenshtein(current->children[i], 'a' + i, targetWord, currentRow, suggestions, maxDistance);
             }
         }
 
         return suggestions;
     }
 
-    void searchLevenshtein(TrieNode* node, char letter, const string& word, vector<int>& previousRow, vector<string>& suggestions, int MAX_DISTANCE = 2) {
-        int numColumns = word.size() + 1;
+    void searchLevenshtein(Trie* node, char letter, const string& s, vector<int>& previousRow, vector<string>& suggestions, int max) {
+        int numColumns = s.size() + 1;
         vector<int> currentRow(numColumns);
         currentRow[0] = previousRow[0] + 1;
 
@@ -102,26 +107,26 @@ public:
             int insertCost = currentRow[j - 1] + 1;
             int deleteCost = previousRow[j] + 1;
             int replaceCost = previousRow[j - 1];
-            if (word[j - 1] != letter) {
+            if (s[j - 1] != letter) {
                 replaceCost++;
             }
             currentRow[j] = min({insertCost, deleteCost, replaceCost});
         }
+
         // Si este nodo representa el final de una palabra, y la distancia es menor o igual al máximo permitido, añadir a sugerencias
-        if (node->word != "" && currentRow.back() <= MAX_EDIT_DISTANCE ) {
+        if (node->isEndOfWord && currentRow.back() <= max) {
             suggestions.push_back(node->word);
         }
+
         // Si cualquier valor en la fila actual es menor o igual al máximo permitido, seguimos buscando en los hijos del nodo
         if (*min_element(currentRow.begin(), currentRow.end()) <= MAX_EDIT_DISTANCE) {
-            for (int i = 0; i < 26; i++) {
+            for (int i = 0; i < ALPHABET_SIZE; i++) {
                 if (node->children[i] != nullptr) {
-                    searchLevenshtein(node->children[i], 'a' + i, word, currentRow, suggestions, 2);
+                    searchLevenshtein(node->children[i], 'a' + i, s, currentRow, suggestions, 2);
                 }
             }
         }
     }
-
-
 };
 
 void loadDictionary(Trie& trie, const string& filename) {
@@ -131,6 +136,9 @@ void loadDictionary(Trie& trie, const string& filename) {
     if (dictionary.is_open()) {
         string line;
         while (getline(dictionary, line)) {
+            for (char& c : line) {
+                c = tolower(c); // Convertir cada palabra a minúsculas
+            }
             // Insertar cada palabra en el Trie
             trie.insert(line);
         }
@@ -141,52 +149,64 @@ void loadDictionary(Trie& trie, const string& filename) {
     }
 }
 
+void suggestCorrection(Trie& trie, const string& inputWord) {
+    // Verificar si la palabra está en el Trie
+    if (!trie.search(inputWord)) {
+        vector<vector<string>> list;
+        misspellings++;
+        cout << "La palabra '" << inputWord << "' podría estar mal escrita. Sugerencias:" << endl;
 
+        // Obtener sugerencias basadas en la distancia de Levenshtein
+        vector<string> suggestions = trie.getLevenshteinSuggestions(inputWord, MAX_EDIT_DISTANCE);
 
-
-//string suggestCorrection(Trie& trie, const string& inputWord) {
-//    vector<string> suggestions = trie.getSuggestions(inputWord);
-//
-//    if (suggestions.empty()) {
-//        return "No se encontraron sugerencias.";
-//    } else {
-//        // Retornar la primera sugerencia, o mejorar esta lógica para mostrar varias opciones
-//        return "¿Quiso decir: " + suggestions[0] + "?";
-//    }
-//}
-
-
-int main(){
-
-        Trie trie;
-
-        // Cargar el diccionario desde un archivo
-        loadDictionary(trie, "palabras.txt");
-
-        // Solicitar palabra al usuario
-        string inputWord;
-        cout << "Ingrese una palabra para verificar: ";
-        cin >> inputWord;
-
-        // Verificar si la palabra está en el Trie
-        if (trie.search(inputWord)) {
-            cout << "La palabra '" << inputWord << "' está escrita correctamente." << endl;
+        if (suggestions.empty()) {
+            cout << "No se encontraron sugerencias." << endl;
         } else {
-            cout << "La palabra '" << inputWord << "' podría estar mal escrita. Sugerencias:" << endl;
-
-            // Obtener sugerencias basadas en la distancia de Levenshtein
-            vector<string> suggestions = trie.getLevenshteinSuggestions(inputWord, MAX_EDIT_DISTANCE);
-
-            if (suggestions.empty()) {
-                cout << "No se encontraron sugerencias." << endl;
-            } else {
-                for (const string& suggestion : suggestions) {
-                    cout << " - " << suggestion << endl;
-                }
+            for (const string& suggestion : suggestions) {
+                cout << " - " << suggestion << endl;
             }
         }
+    }
+}
 
+vector<string> splitText(const string& text) {
+    stringstream str_strm(text);
+    string tmp;
+    vector<string> wordsInText;
+    char delim = ' '; // Define el delimitador donde se dividira la palabra
+    while (getline(str_strm, tmp, delim)) { //Donde exista un espacio, se cuenta como una palabra
+        wordsInText.push_back(tmp); //Y se guarda en un vector
+    }
 
+    //Cada palabra descartamos cualquier signo que no sea una letra y la pasamos a minusculas
+    for (string& word : wordsInText) {
+        for (int i = 0; i < word.length(); i++) {
+            if (!isalpha(word[i]))
+                word.erase(i, 1);
+            word[i] = tolower(word[i]);
+        }
+    }
+    return wordsInText;
+}
+
+int main(){
+    Trie trie;
+    vector<string> fullText;
+
+    // Cargar el diccionario desde un archivo
+    loadDictionary(trie, "listado-general.txt");
+
+    //Solicitar texto al usuario
+    string text;
+    cout << "Ingrese el texto a verificar: ";
+    getline(cin, text);
+    fullText = splitText(text);
+
+    //Cada palabra del texto la comparamos y buscamos sugerencias
+    for (const string& s : fullText) {
+        suggestCorrection(trie, s);
+    }
+    Trie::showMisspellings();
 
     return 0;
 }
